@@ -57,6 +57,7 @@ while(video.isOpened()):
 
     ############################################
     # Pre-process Frame
+    # gauss = cv2.GaussianBlur(imgGray,(5,5),0)
     _, thresh = cv2.threshold(imgGray,240,255,cv2.THRESH_BINARY)
     cv2.imshow("Threshold", thresh)
     countours,_ = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
