@@ -7,7 +7,8 @@ from shapeDetection import ShapeDetector
 
 # Cargamos la imagen
 #original = cv2.imread("figures/monedas.jpg")
-img     = cv2.imread("clase_4_18_6/fugPlanasSimple.jpg")
+# img     = cv2.imread("clase_4_18_6/fugPlanasSimple.jpg")
+img     = cv2.imread("clase_4_18_6/rectangulo.png")
 # img     = cv2.imread("clase_4_18_6/figurasplanas2.jpg")
 # img = cv2.imread("clase_4_18_6/articles-229261_imagen_01.png")
 # img = cv2.imread("info/shape-detection/shapes_and_colors.png") #no funciona con figuras rotadas, corregir
@@ -39,6 +40,7 @@ if(0):
 
 for countour in countours:
     shape,approx = sd.detect(countour)
+    print(approx)
     x,y,w,h = cv2.boundingRect(approx)
     if approx.ravel()[0] == 0 and approx.ravel()[1] == 00 : #no toma el contorno de la imagen
         continue
