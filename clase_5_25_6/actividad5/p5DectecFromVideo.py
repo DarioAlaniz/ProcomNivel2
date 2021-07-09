@@ -1,10 +1,8 @@
 import cv2
 import numpy as np
 # from shapeDetection import ShapeDetector
-from shapeDetection import*
-# import fileKernels as filter
-
-
+from shapeDetection import ShapeDetector
+import fileKernels as filter
 ############################################
 # Test Video 1
 if(0):
@@ -16,33 +14,55 @@ if(0):
 # Test Video 2
 if(0):
     frame_width = 640; frame_height = 360
-    video = cv2.VideoCapture("clase_5_25_6/videos/videoForm2_Trim.mp4")
+    video = cv2.VideoCapture("clase_5_25_6/videos/videoForm2.mp4")
 if(0):
     limite = 240
-    enable_gauss = 0
-    size_gauss = 5
     area_up = 190476
     area_low = 1170
+    enable_filter_gauss = 0
+    size_gauss = 5
+    enable_filter_canny = 0
+    up_canny = 200
+    low_canny = 55
+    enable_filter_kernel = 0
+    tipe_kernel = 5  
 ############################################
 
 ############################################
 # Test Video 2
-if(1):
+if(0):
     frame_width = 640; frame_height = 360
     video = cv2.VideoCapture("clase_5_25_6/videos/videoplayback.mp4")
 if(0):
     limite = 217
-    enable_gauss = 0
-    size_gauss = 5
     area_up = 27211
-    area_low = 544    
+    area_low = 544
+    enable_filter_gauss = 0
+    size_gauss = 5
+    enable_filter_canny = 0
+    up_canny = 200
+    low_canny = 55
+    enable_filter_kernel = 0
+    tipe_kernel = 5   
 ############################################
 
 ############################################
 # Turn On camera
-if(0):
+if(1):
     frame_width = 1920; frame_height = 1080
     video = cv2.VideoCapture(0)
+#http://geoplana.blogspot.com/2008/09/figuras-geomtricas-planas-o-polgonos.html imagen tomada por la camara del celular
+if(0):
+    limite = 170
+    area_up = 38721
+    area_low = 295
+    enable_filter_gauss = 0
+    size_gauss = 5
+    enable_filter_canny = 0
+    up_canny = 200
+    low_canny = 55
+    enable_filter_kernel = 0
+    tipe_kernel = 5 
 ############################################
 
 fps      = 30               #frecuencia de reproduccin de salida
@@ -63,66 +83,89 @@ sd = ShapeDetector()
 #Create trackbars
 def nothing(x):
     pass
-if(1):
+if(0):
     nameWindows = 'Parametros'
+    # Select_thres= '0 Threshold: OFF \n1 : Threshold: ON'
     lim_thres = 'lim_thresh'
-    GaussBlur = 'Gauss : 0 OFF \n1 : Gauss : ON'
     area_limit_up = 'upper limit of area'
     area_limit_low = 'lower limit of area'
-    canny_low='lower canny'
+    Select_Gauss = '0 Gauss : OFF  \n1 : Gauss : ON'
+    Select_Canny = '0 Canny : OFF  \n1 : Canny : ON'
     canny_up = 'upper canny'
+    canny_low='lower canny'
+    Select_Kernel = '0 Kernel : OFF \n1 : Kernel: ON'
+    tipe_of_kernel='tipe of kernel'
 
     cv2.namedWindow(nameWindows)
-    cv2.resizeWindow(nameWindows,720,240)
+    cv2.resizeWindow(nameWindows,720,420)
 
+    # cv2.createTrackbar(Select_thres,nameWindows,0,1,nothing)
     cv2.createTrackbar(lim_thres,nameWindows,0,255,nothing)
-    cv2.createTrackbar(GaussBlur,nameWindows,0,1,nothing)
-    cv2.createTrackbar('Size Gauss',nameWindows,1,50,nothing)
     cv2.createTrackbar(area_limit_up,nameWindows,0,200000,nothing)
     cv2.createTrackbar(area_limit_low,nameWindows,0,2000,nothing)
-    cv2.createTrackbar(canny_low,nameWindows,0,255,nothing)
+    cv2.createTrackbar(Select_Gauss,nameWindows,0,1,nothing)
+    cv2.createTrackbar('Size Gauss',nameWindows,1,50,nothing)
+    cv2.createTrackbar(Select_Canny,nameWindows,0,1,nothing)
     cv2.createTrackbar(canny_up,nameWindows,0,255,nothing)
+    cv2.createTrackbar(canny_low,nameWindows,0,255,nothing)
+    cv2.createTrackbar(Select_Kernel,nameWindows,0,1,nothing)
+    cv2.createTrackbar(tipe_of_kernel,nameWindows,1,7,nothing)
 
-
+############################################
+# Dictionary of different kernels
+kernels = { 1       : filter.smallBlur,
+            2       : filter.largeBlur,
+            3       : filter.sharpen,
+            3       : filter.laplacian,
+            4       : filter.edge_detect,
+            5       : filter.edge_detect2,
+            6       : filter.sobelX,
+            7       : filter.sobelY }
 
 while(video.isOpened()):
     #captura un frame y elimina ese frame del video
     ret, img = video.read()  #img = frame, ret = estado valido del frame si es false llego al final del archivo
-    img = cv2.resize(img,(640,360))
+    # img = cv2.resize(img,(640,360))
     if ret == False:
         break
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    imgGray = cv2.resize(imgGray,(648,360))
+    # imgGray = cv2.resize(imgGray,(648,360))
 
     ############################################
-    if(1):
+    if(0):
+        # enable_filter_thershold = cv2.getTrackbarPos(Select_thres,nameWindows)
         limite = cv2.getTrackbarPos(lim_thres,nameWindows)
-        enable_gauss = cv2.getTrackbarPos(GaussBlur,nameWindows)
-        size_gauss = cv2.getTrackbarPos('Size Gauss',nameWindows)
         area_up = cv2.getTrackbarPos(area_limit_up,nameWindows)
         area_low = cv2.getTrackbarPos(area_limit_low,nameWindows)
-        low_canny = cv2.getTrackbarPos(canny_low,nameWindows)
+        enable_filter_gauss = cv2.getTrackbarPos(Select_Gauss,nameWindows)
+        size_gauss = cv2.getTrackbarPos('Size Gauss',nameWindows)
+        enable_filter_canny = cv2.getTrackbarPos(Select_Canny,nameWindows)
         up_canny = cv2.getTrackbarPos(canny_up,nameWindows)
+        low_canny = cv2.getTrackbarPos(canny_low,nameWindows)
+        enable_filter_kernel = cv2.getTrackbarPos(Select_Kernel,nameWindows)
+        tipe_kernel = cv2.getTrackbarPos(tipe_of_kernel,nameWindows)
+        
 
     
     # Pre-process Frame
-    if enable_gauss:
+    if enable_filter_gauss:
         gauss = cv2.GaussianBlur(imgGray,(size_gauss,size_gauss),0)
-        canny = cv2.Canny(gauss, low_canny, up_canny)
+        imgGray = gauss
+    if enable_filter_kernel:
+        imgGray = cv2.filter2D(imgGray,-1,kernels[tipe_kernel])
+    if enable_filter_canny:
+        canny = cv2.Canny(imgGray, low_canny, up_canny)
         cv2.imshow('Canny',canny)
+        imgGray = canny
         countours,_ = cv2.findContours(canny.copy(),cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
-
     else:
-
         _, thresh = cv2.threshold(imgGray,limite,255,cv2.THRESH_BINARY)
         cv2.imshow("Threshold", thresh)
         countours,_ = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
     ############################################
 
     ############################################
-    
-
     # Countour Analysis
     for countour in countours:
         shape,approx = sd.detect(countour)
@@ -132,13 +175,17 @@ while(video.isOpened()):
             cv2.drawContours(img,[approx],0,(255,0,0),2)
             #coordenads para escribir el texto    
             M = cv2.moments(countour) #momento de una imagen: promedio ponderado de la intencidad de pixeles 
-            #Calculo en centro de una imagen
-            # cx = int(M["m10"]/M["m00"])
-            # cy = int(M["m01"]/M["m00"])
-            cx = approx.ravel()[0]
-            cy = approx.ravel()[1]
+            if M["m00"] != 0:
+                #Calculo en centro de una imagen
+                cx = int(M["m10"]/M["m00"])
+                cy = int(M["m01"]/M["m00"])
+            else:
+                cx = approx.ravel()[0]
+                cy = approx.ravel()[1]  
+            # cx = approx.ravel()[0]
+            # cy = approx.ravel()[1]
             cv2.putText(img,shape, (cx,cy),cv2.FONT_HERSHEY_COMPLEX,0.5,(0,0,0))
-            # cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+            cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
     ############################################
 
     videoOut.write(img)

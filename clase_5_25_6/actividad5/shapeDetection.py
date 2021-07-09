@@ -33,24 +33,25 @@ class ShapeDetector:
 
         elif len(approx)==4:
             aspectRatio = float(w)/h
+            # print(aspectRatio,x)
             #margen de error por tener pixeles desplazados
             approx=self.order(approx) #ordeno la secuencia de puntos como quiero
             x1=approx.ravel()[0];y1=approx.ravel()[1]
             x2=approx.ravel()[2];y2=approx.ravel()[3]
             x3=approx.ravel()[4];y3=approx.ravel()[5]
             x4=approx.ravel()[6];y4=approx.ravel()[7]
-            if (aspectRatio >= 0.95 and aspectRatio <= 1.05 and 
-                (np.abs(y1-y2)>=0 or np.abs(y1-y2)<=2)):
+            if (aspectRatio >= 0.90 and aspectRatio <= 1.1 and 
+                (np.abs(y1-y2)>=0 and np.abs(y1-y2)<=3)):
                 self.setName('Square')
             else:
-                if ((np.abs(x1-x3)>=0 or np.abs(x1-x3)<=2) and (np.abs(y2-y4)==0 or np.abs(y2-y4)<=2)):
+                if ((np.abs(x1-x3)>=0 and np.abs(x1-x3)<=3) and (np.abs(y2-y4)>=0 or np.abs(y2-y4)<=3)):
                     self.setName("Diamond")
-                elif np.abs(x1-x4)>=2 : #si los puntos no estan alineados puede ser un trapecio o romboide
+                elif np.abs(x1-x4)>=6: #si los puntos no estan alineados puede ser un trapecio o romboide
                     b1 = np.abs(x1 - x2)
                     b2 = np.abs(x3 - x4)
                     a1 = np.sqrt((b1-w)**2+h**2)
                     a2 = np.sqrt((b2-w)**2+h**2)
-                    if np.abs(b1-b2)>=0 and np.abs(b1-b2)<=1 and np.abs(a1-a2)>=0 and np.abs(a1-a2)<=1: #si los lados son iguales en un romboide
+                    if np.abs(b1-b2)>=0 and np.abs(b1-b2)<=3 and np.abs(a1-a2)>=0 and np.abs(a1-a2)<=3: #si los lados son iguales en un romboide
                         self.setName("Rhomboid")
                     else:
                         self.setName("Trapece")
@@ -71,5 +72,4 @@ class ShapeDetector:
                 self.setName('Circle')
             elif relacion <=0.94 or relacion >=1.2:
                 self.setName('Oval')
-
         return self.getName(),approx

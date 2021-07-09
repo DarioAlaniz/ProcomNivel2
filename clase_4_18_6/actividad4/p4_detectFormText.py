@@ -8,7 +8,8 @@ from shapeDetection import ShapeDetector
 # Cargamos la imagen
 #original = cv2.imread("figures/monedas.jpg")
 # img     = cv2.imread("clase_4_18_6/fugPlanasSimple.jpg")
-img     = cv2.imread("clase_4_18_6/rectangulo.png")
+# img     = cv2.imread("clase_4_18_6/rectangulo.png")
+img       = cv2.imread("clase_4_18_6/cuadrado_simple.jpg")
 # img     = cv2.imread("clase_4_18_6/figurasplanas2.jpg")
 # img = cv2.imread("clase_4_18_6/articles-229261_imagen_01.png")
 # img = cv2.imread("info/shape-detection/shapes_and_colors.png") #no funciona con figuras rotadas, corregir
@@ -29,7 +30,8 @@ if(1):
     # filtra la imagen en un cierto rango, en base a un cambio de color 
     # satura la imagen que esta fuera del rango
     # ayuda a no tener doble contorno en las transiciones abruptas
-    _, thresh = cv2.threshold(imgGray,240,255,cv2.THRESH_BINARY)
+    # _, thresh = cv2.threshold(imgGray,240,255,cv2.THRESH_BINARY)
+    _, thresh = cv2.threshold(imgGray,202,255,cv2.THRESH_BINARY)
     cv2.imshow("Threshald", thresh)
     countours,_ = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
 if(0):
@@ -52,14 +54,14 @@ for countour in countours:
         
         M = cv2.moments(countour) #momento de una imagen: promedio ponderado de la intencidad de pixeles 
         #Calculo en centro de una imagen
-        cx = int(M["m10"]/M["m00"])
-        cy = int(M["m01"]/M["m00"])
-        # x = approx.ravel()[0]
-        # y = approx.ravel()[1]
+        # cx = int(M["m10"]/M["m00"])
+        # cy = int(M["m01"]/M["m00"])
+        cx = approx.ravel()[0]
+        cy = approx.ravel()[1]
         cv2.putText(img,shape, (cx,cy),cv2.FONT_HERSHEY_COMPLEX,0.5,(0,0,0))
         cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
         cv2.imshow("Shape",img)
-        cv2.waitKey(0)
+        
 
-
+cv2.waitKey(0)
 # cv2.destroyAllWindows()

@@ -51,7 +51,7 @@ class ShapeDetector:
                     b2 = np.abs(x3 - x4)
                     a1 = np.sqrt((b1-w)**2+h**2)
                     a2 = np.sqrt((b2-w)**2+h**2)
-                    if np.abs(b1-b2)>=0 and np.abs(b1-b2)<=1 and np.abs(a1-a2)>=-1 and np.abs(a1-a2)<=1: #si los lados son iguales en un romboide
+                    if np.abs(b1-b2)>=0 and np.abs(b1-b2)<=1 and np.abs(a1-a2)>=0 and np.abs(a1-a2)<=1: #si los lados son iguales en un romboide
                         self.setName("Rhomboid")
                     else:
                         self.setName("Trapece")
