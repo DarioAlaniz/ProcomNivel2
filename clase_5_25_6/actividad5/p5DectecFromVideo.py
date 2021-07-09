@@ -83,7 +83,7 @@ sd = ShapeDetector()
 #Create trackbars
 def nothing(x):
     pass
-if(0):
+if(1):
     nameWindows = 'Parametros'
     # Select_thres= '0 Threshold: OFF \n1 : Threshold: ON'
     lim_thres = 'lim_thresh'
@@ -133,7 +133,7 @@ while(video.isOpened()):
     # imgGray = cv2.resize(imgGray,(648,360))
 
     ############################################
-    if(0):
+    if(1):
         # enable_filter_thershold = cv2.getTrackbarPos(Select_thres,nameWindows)
         limite = cv2.getTrackbarPos(lim_thres,nameWindows)
         area_up = cv2.getTrackbarPos(area_limit_up,nameWindows)

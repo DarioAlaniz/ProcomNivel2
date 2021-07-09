@@ -2,6 +2,9 @@ info
 *.pdf
 *.vscode
 *.mp4
+*.png
+*.jpg
+clase_6_2_7/server_lucas.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

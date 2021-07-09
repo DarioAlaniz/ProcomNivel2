@@ -1,4 +1,4 @@
-
+<!--front end (parte visible del sitio web y aplicacion)-->
 <html>
     <head>
         <meta charset="UTF-8"/>
@@ -25,19 +25,31 @@
         </style>
     </head>
     <body>
+    <h1>WebRTC</h1>
     <h2>Options</h2>
     <div class="option">
         <label for="use-video">Use video</label>
         <select id="video-resolution">
             <option value="640x480">640x480</option>
             <option value="1280x720">1280x720</option>
+            <option value="1920x1080">1920x1080</option>
         </select>
         <select id="video-codec">
             <option value="H264/90000">H264</option>
         </select>
         <select id="kernelRef">
-            <option value="1">Edge1</option>
-            <option value="2">Edge2</option>
+            <option value="1">SmallBlur</option>
+            <option value="2">LargBlur</option>
+            <option value="3">Sharpen</option>
+            <option value="4">Laplacian</option>
+            <option value="5">Edge_Detect</option>
+            <option value="6">Edge_Detect2</option>
+            <option value="7">SobelX</option>
+            <option value="8">SobelY</option>
+            <option value="9">Canny</option>
+            <option value="10">AutoCanny</option>
+            <option value="11">ShapeDetection</option>
+            
         </select>
 
      
