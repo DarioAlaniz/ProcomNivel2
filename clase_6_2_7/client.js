@@ -99,14 +99,14 @@ function getDevices() {
 
 function start(){
 
-    document.getElementById('stop').disabled = false;
+    document.getElementById('stop').disabled = false; //atenua el efecto del color dando censacion de apagado
     document.getElementById('start').disabled = true;
 
-    document.getElementById('start').style.display = 'inline';
+    document.getElementById('start').style.display = 'inline'; //permanece activo el boton
 
     var video1 = document.querySelector("#videoElement");
 
-    pc = createPeerConnection();
+    pc = createPeerConnection(); //gestiona la conexion webrtc
 
     var time_start = null;
 
