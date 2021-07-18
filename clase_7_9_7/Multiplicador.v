@@ -1,6 +1,6 @@
 module Multiplicador
 #(
-parameter N_WORDS = 16,
+parameter N_WORDS = 32,
 parameter NB_DATA = 8
 )
 (
@@ -35,16 +35,22 @@ endgenerate
 /////////////////////////////////////////////////
 //-----------Parallel adder tree---------------//
 wire signed [NB_DATA*2 + $clog2(N_WORDS) - 1:0] adder; 
-wire signed [NB_DATA*2 + $clog2(N_WORDS) - 1:0] adder_vect [(N_WORDS/2) - 1 : 0];//necesito (N_words/2) - 1 sumadores en caso de N_words potencia de 2
+wire signed [NB_DATA*2 + $clog2(N_WORDS) - 1:0] adder_vect [(N_WORDS/2) - 1 - 1 : 0];//necesito (N_words/2) - 1 sumadores en caso de N_words potencia de 2
 generate
-    genvar ptr3;
-    for (ptr3 = 0 ;ptr3 < N_WORDS/2 ;ptr3 = ptr3+2 ) begin
-        assign adder_vect[ptr3-(ptr3/2)] = multi[ptr3] + multi[ptr3+1];
+    genvar ptr3,ptr4;
+    for (ptr4 = 0;ptr4<$clog2(N_WORDS/2) ;ptr4=ptr4+1) begin
+        for (ptr3 = 0 ;ptr3 < (N_WORDS/4)/(2**ptr4) ;ptr3 = ptr3+1 ) begin //N_WORDS/2 por aumentar el ptr3 + 2, sino seria N_WORDS/4 y ptr3 + 1 y las seleccion seria con 2**ptr3 
+            if (ptr4==0) begin
+                assign adder_vect[ptr3] = multi[2*ptr3] + multi[(2*ptr3)+1]; 
+            end
+            else begin
+                assign adder_vect[ptr3 + N_WORDS/2 - ((N_WORDS/2)/(2**ptr4))] = adder_vect[2*ptr3 + N_WORDS/2 - (N_WORDS/(2**ptr4))] + adder_vect[2*ptr3 + N_WORDS/2 - (N_WORDS/(2**ptr4)) + 1];
+            end
+        end 
     end
-    assign adder = adder_vect[0] + adder_vect[1] + adder_vect[2] + adder_vect[3];  
 
 endgenerate
 /////////////////////////////////////////////////
-assign o_data = adder;
+assign o_data = adder_vect[(N_WORDS/2) - 1 - 1];
 
 endmodule
