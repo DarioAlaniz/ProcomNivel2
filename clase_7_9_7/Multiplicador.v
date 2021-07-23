@@ -1,6 +1,6 @@
 module Multiplicador
 #(
-parameter N_WORDS = 32,
+parameter N_WORDS = 16,
 parameter NB_DATA = 8
 )
 (
@@ -11,8 +11,12 @@ parameter NB_DATA = 8
 );
 
 /////////////////////////////////////////////////
+//-----------LocalParam-----------------------//
+localparam N_WORD_POT2 = 2**$clog2(N_WORDS);
+
+/////////////////////////////////////////////////
 //-----------Generate input matrix-------------//
-wire signed [NB_DATA-1:0] matrix_input [N_WORDS-1:0] ;
+wire signed [NB_DATA-1:0] matrix_input [N_WORDS:0] ; //contemplo los impares como pares
 
 generate
     genvar ptr1;
@@ -23,18 +27,21 @@ endgenerate
 
 /////////////////////////////////////////////////
 //-----------Mulplication----------------------//
-wire signed [(NB_DATA*2) - 1: 0] multi [(N_WORDS/2)-1:0];
+wire signed [(NB_DATA*2) - 1: 0] multi [(N_WORDS/2)-1:0]; //caso de impar agregar uno mas
 generate
     //falta agregar condicionales
     genvar ptr2;
-    for (ptr2 = 0 ;ptr2<N_WORDS ;ptr2 = ptr2+2) begin:multi_pot_2
-        assign multi[ptr2-(ptr2/2)] = matrix_input[ptr2] * matrix_input[ptr2+1];
+    if (N_WORDS%2==0)begin:Par
+        for (ptr2 = 0 ;ptr2<N_WORDS ;ptr2 = ptr2+2) begin
+            assign multi[ptr2-(ptr2/2)] = matrix_input[ptr2] * matrix_input[ptr2+1];
+        end
     end
 endgenerate
 
 /////////////////////////////////////////////////
 //-----------Parallel adder tree---------------//
-wire signed [NB_DATA*2 + $clog2(N_WORDS) - 1:0] adder; 
+//numero de etapas del sumador = clog2(N_WORDS/2)
+//numero de sumas por etapa = (N_WORDS/4)/(2**n), con n = numero de etapas [0,1,2....k-1]
 wire signed [NB_DATA*2 + $clog2(N_WORDS) - 1:0] adder_vect [(N_WORDS/2) - 1 - 1 : 0];//necesito (N_words/2) - 1 sumadores en caso de N_words potencia de 2
 generate
     genvar ptr3,ptr4;
@@ -48,7 +55,8 @@ generate
             end
         end 
     end
-
+    // assign adder_vect[N_WORDS/2 - 1 - 1] = ((N_WORDS & (N_WORDS-1)) == 0) ? adder_vect[N_WORDS/2 - 1 - 1] : 
+    //                                        ((N_WORDS/4)%2==0)             ? (adder_vect[N_WORDS/2 - 1 - 3] + adder_vect[N_WORDS/2 - 1 - 2]): (adder_vect[N_WORDS/4-1] + adder_vect[N_WORDS/2 - 1 - 2]) ; 
 endgenerate
 /////////////////////////////////////////////////
 assign o_data = adder_vect[(N_WORDS/2) - 1 - 1];
