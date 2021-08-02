@@ -1,6 +1,6 @@
 module Multiplicador
 #(
-parameter N_WORDS = 12,
+parameter N_WORDS = 16,
 parameter NB_DATA = 8
 )
 (
@@ -9,7 +9,7 @@ parameter NB_DATA = 8
     // input                                           reset   ,
     // input                                           clock    
 );
-
+//Agregar condicion para N_words = 1
 /////////////////////////////////////////////////
 //-----------LocalParam-----------------------//
 localparam N_WORD_POT2 = 2**$clog2(N_WORDS); //llevo todo el sumador interno como si fuera potencia de 2 
@@ -36,7 +36,10 @@ wire signed [(NB_DATA*2) - 1: 0] multi [(N_WORD_POT2/2):0]; //contemplo los impa
 generate
     //falta agregar condicionales
     genvar ptr2;
-    if (N_WORDS%2==0)begin:ParProducto
+    if(N_WORDS==1)begin
+        assign multi[0] = matrix_input[0];
+    end
+    else if (N_WORDS%2==0)begin:ParProducto
         for (ptr2 = 0 ;ptr2<N_WORD_POT2 ;ptr2 = ptr2+2) begin
             assign multi[ptr2-(ptr2/2)] = matrix_input[ptr2] * matrix_input[ptr2+1];
         end
@@ -58,7 +61,11 @@ wire signed [NB_DATA*2 + $clog2(N_WORDS/2) - 1:0] adder_vect_aux    [(N_WORD_POT
 wire signed [NB_DATA*2 + $clog2(N_WORDS/2) - 1:0] o_data_aux ; // para guardar la ultima suma
 generate
     genvar ptr3,ptr4;
-    if(N_WORDS%2==0)begin:ParSuma
+    if(N_WORDS==1)begin
+        assign adder_vect[0] = multi[0];
+        assign o_data_aux = adder_vect[0][NB_DATA-1:0];
+    end
+    else if(N_WORDS%2==0)begin:ParSuma
         for (ptr4 = 0;ptr4<$clog2(N_WORD_POT2/2) ;ptr4=ptr4+1) begin
             for (ptr3 = 0 ;ptr3 < (N_WORD_POT2/4)/(2**ptr4) ;ptr3 = ptr3+1 ) begin //N_WORDS/2 por aumentar el ptr3 + 2, sino seria N_WORDS/4 y ptr3 + 1 y las seleccion seria con 2**ptr3 
                 if (ptr4==0) begin

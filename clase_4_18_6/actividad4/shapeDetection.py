@@ -2,6 +2,12 @@
 import  cv2
 import numpy as np
 
+#se debe agregar en otro carpeta y crear un __init__.py dentro de la misma carpeta para poder levantar la clase desde
+#otro .py
+# y se puede pasar el path con la direccion a la clase donde esta su carpeta, cuando la clase se encuentre fuera de las sub carpetas
+#import sys
+#sys.path.append(path)
+#https://www.geeksforgeeks.org/private-methods-in-python/
 class ShapeDetector:
     #metodo de inicializacion sin nigun parametro
     def __init__(self):
