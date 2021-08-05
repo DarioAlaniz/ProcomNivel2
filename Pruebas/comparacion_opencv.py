@@ -7,75 +7,130 @@ import fileKernels as filter
 import matplotlib.pyplot as plt
 from tool._fixedInt import *
 
-def rescale_intensity_coustom(image):
-    #Faltar completar, simplemente esta como prueba para ver que hacer la funcion!!!
-    out_dtype = _output_dtype(image.dtype.type)
-    print(out_dtype)
-    out_range = 'dtype'
-    (imin, imax) = map(float, (0 , 255))
-    print(imin,imax,type(imin))
-    imin, imax = map(float, intensity_range(image, (0,255)))
-    print(imin,imax,type(imin))
-    omin, omax = map(float, intensity_range(image, out_range,
-                                            clip_negative=(imin >= 0)))
-    print(omin,omax,type(omin))
-                                                                                            
-    image = np.clip(image, imin, imax)
-    # image = image / imax
-    return 0 
+##################################
+#Var globales
+espacio = 100
 
-def fixPointImage(image,NB,NBF,sMode,rMode,satMode):
-    imageFlatten = np.array(image,dtype=float)
-    imageFlatten = imageFlatten.flatten()
-    imagePf = arrayFixedInt(NB,NBF,imageFlatten,signedMode=sMode,roundMode=rMode,saturateMode=satMode)
-    imagePf = imagePf.reshape(image.shape[0],image.shape[1])
+# def rescale_intensity_coustom(image):
+#     global espacio
+#     #Faltar completar, simplemente esta como prueba para ver que hacer la funcion!!!
+#     out_dtype = _output_dtype(image.dtype.type)
+#     print ("Tipo de dato de salida de la imagen".capitalize().center(espacio, "*"))
+#     print(out_dtype)
+#     out_range = 'dtype'
+#     imin, imax = map(float, intensity_range(image, (0,255)))
+#     print ("Rango de entrada: ".capitalize().center(espacio, "*"))
+#     print(imin,imax,type(imin))
+#     omin, omax = map(float, intensity_range(image, out_range,
+#                                             clip_negative=(imin >= 0)))
+#     print ("Rango de salida: ".capitalize().center(espacio, "*"))
+#     print(omin,omax,type(omin))                                                 
+#     image = np.clip(image, imin, imax)
+#     print ("Corte de lo valores fuera del rango de entrada".capitalize().center(espacio, "*"))
+#     print(image)
+#     image = (image - imin) / (imax - imin)
+#     print ("Divicion por el rango maximo de entrada".capitalize().center(espacio, "*"))
+#     print(image)
+#     return np.asarray(image * (omax - omin) + omin, dtype=out_dtype)
+    # image = image / imax
+
+def rescale_intensity_coustom(image):
+    #nota : se debe hacer un corte (np.clip(image,(0,255))), cuando la matriz tiene numeros negativos 
+    max = DeFixedInt(8,0,'U') 
+    max.value = 255.0                                   #valor para restablecer la imagen de salida de 0 a 255
+    image = image * max
+    print(image)
+    imageFloat      = fixPointToFloat(image)            #obtengo el representa en flotante para solamente tomar la parte entera 
+    print(imageFloat)
+    imageRescale    = fixPointImage(imageFloat,8,0,'U') #imagen solo teniendo en cuenta la parte entera
+    print(imageRescale)
+    imageRescale    = fixPointoIntValue(imageRescale)   #Obtengo el entero representante
+    return imageRescale
+
+def fixPointImage(image,NB,NBF,sMode,rMode='round',satMode='saturate'):
+    imageFlatten    = np.array(image,dtype=float)
+    imageFlatten    = imageFlatten.flatten()
+    imagePf         = arrayFixedInt(NB,NBF,imageFlatten,signedMode=sMode,roundMode=rMode,saturateMode=satMode)
+    imagePf         = imagePf.reshape(image.shape[0],image.shape[1])
     return imagePf
 
 def fixPointToFloat(matrix):
-    matrixFlatten = matrix.flatten()
-    imageFloat = np.zeros(matrix.size)
+    matrixFlatten   = matrix.flatten()
+    imageFloat      = np.zeros(matrix.size)
     for i in range(len(matrixFlatten)):
-        imageFloat[i] = matrixFlatten[i].fValue
-    imageFloat = imageFloat.reshape(matrix.shape[0],matrix.shape[1]) #matris cuantificada
+        imageFloat[i]   = matrixFlatten[i].fValue
+    imageFloat      = imageFloat.reshape(matrix.shape[0],matrix.shape[1]) #matris cuantificada
     return imageFloat
 
+def fixPointoIntValue(matrix):
+    matrixFlatten   = matrix.flatten()
+    imageIntValue   = np.zeros(matrix.size,dtype=np.uint8) #definida en uint8 por guardar datos en 
+    for i in range(len(matrixFlatten)):
+        imageIntValue[i] = matrixFlatten[i].intvalue
+    imageIntValue   = imageIntValue.reshape(matrix.shape[0],matrix.shape[1]) #matris cuantificada
+    return imageIntValue
+
 def conv(image,kernel):
+    global espacio
+    nb=8
+    nbs=7
+    sig = 'S'
     # obtengo el largo y ancho de la imagen y el kernel
     (ih,iw)=  np.shape(image)
     (kh,kw) = np.shape(kernel)
+    
     # saca el numero de fila y columnas para hacer un zero padding
     pad = kw//2
     # armo la imagen ampliada para tener los mismo pixeles de salida
     enlargedImage=cv.copyMakeBorder(image,pad,pad,pad,pad,cv.BORDER_REFLECT_101)
+
     # rotacion del kernel, opencv hace una correlacion no una convolucion por lo que no rota el kernel
-    kernel = np.flip(kernel)
-    imagePf = fixPointImage(enlargedImage,8,0,'U','round','saturate') #imagen cuantificada, luego del padding
+    kernel = np.flip(kernel)                    
     # kernel=np.flipud(kernel) #roto en el eje y
     # kernel=np.fliplr(kernel) #roto en el eje x    
-    # output = np.zeros(np.shape(image))
+
+    #normalizo para usar un notacion Q(7) no tengo en cuenta el signo
+    enlargedImage = enlargedImage / 255         
+
+    #imagen cuantificada, luego del padding
+    imagePf = fixPointImage(enlargedImage,nb,nbs,sig)                
+    
+    #Generacion de la matriz de salida
     output = np.zeros(image.size,dtype=float)
-    output = arrayFixedInt(8,0,output,signedMode='U',roundMode='round',saturateMode='saturate')
+    output = arrayFixedInt(nb,nbs,output,signedMode=sig,roundMode='round',saturateMode='saturate') #matris de salida donde se guardan los resultados
     output = output.reshape(np.shape(image))
     # print(output)
+
+    #Convolucion 2D
     for y in np.arange(0, ih ):
         for x in np.arange(0, iw):
             # extraigo la region a para hacer el producto punto del mismo tamaño del kernel,
             # centrada en (x,y)
             reg = imagePf[y :y + kh, x :x + kw]
-            reg1 = reg.flatten() #vector para realizar el producto 1 a 1 con el kernel
-            # realizo la convolucion,
-            # output [y,x] = (reg * kernel).sum()
-            acum=DeFixedInt(16,0,signedMode='U') #almacena los productos
+
+            #vector para realizar el producto 1 a 1 con el kernel
+            reg1 = reg.flatten() 
+            
+            acum=DeFixedInt(nb,nbs,signedMode=sig) #almacena los productos
             for k in range(kernel.size):
                 acum=acum+reg1[k]*kernel.flatten()[k]
-            # # guardo el valor obtenido de la convolucion, 
-            # # en la correspondiete coordenada (x,y)
+            # guardo el valor obtenido de la convolucion, 
+            # en la correspondiete coordenada (x,y)
             output[y,  x] = acum
+
+            # Con punto flotante
+            # output [y,x] = (reg * kernel).sum()
+    
+    
+    print ("Imagen antes del rescale:".capitalize().center(espacio, "*"))
     print(output)
-    output = fixPointToFloat(output) # para realizar el rescale necesito solo los valores en flotante por el momento hasta hacer el rescale a mano
-    output = rescale_intensity(output, in_range=(0,255))
-    # prueba = rescale_intensity_coustom(output)
-    output = (output*255).astype("uint8")
+    # output = rescale_intensity(output, in_range=(0,255))
+    output = rescale_intensity_coustom(output)
+    print ("Imagen despues del rescale".capitalize().center(espacio, "*"))
+    print(output)
+    output = (output*255).astype("uint8") #para poder usarla en la openCV
+    print ("Vuelve a multiplicar por 255 y toma la parte entera".capitalize().center(espacio, "*"))
+    print(output)
     # print(_output_dtype(output.dtype.type))
     # La otra metodologia impuesta por en trabajo conseva todo el rango, pero cambia un poco en la escala ya que lleva la media
     # con histograma se aprecia este corrimiento
@@ -184,12 +239,13 @@ if(0):
 Prueba para ver la imagen de salida con el kernel cuantificado
 ''' 
 if(1):
-    NB=16
+    NB=10
     NBF=9
     sizeGauss=25
     gauss = cv.getGaussianKernel(sizeGauss,0,cv.CV_32F) #filtro gauss generado para pruebas de cuantificacion
     gauss = gauss.reshape(sizeGauss//5,sizeGauss//5)
-    gaussPf = fixPointImage(gauss,16,9,'U','round','saturate')
+    gaussPf = fixPointImage(gauss,NB,NBF,'S','round','saturate') #convierto a formato Q(9)
+    print ("kernel cuantificado".capitalize().center(espacio, "*"))
     print(gaussPf)
     outputCustomConvolve = conv(imageGray,gaussPf)
     outputOpencv = cv.filter2D(imageGray,-1,gauss)
@@ -201,19 +257,17 @@ if(1):
     cv.waitKey(0)
     cv.destroyAllWindows()
     if(0):
-        histOpenCv = cv.calcHist([outputOpencv],[0],None,[256],[0,256])
-        histCustomConvolve = cv.calcHist([outputCustomConvolve],[0],None,[256],[0,256])
+        # histOpenCv = cv.calcHist([outputOpencv],[0],None,[256],[0,256])
+        # histCustomConvolve = cv.calcHist([outputCustomConvolve],[0],None,[256],[0,256])
         plt.figure(1)
+        # plt.subplot(3,1,1)
+        # plt.hist(error.flatten(),100)
         plt.subplot(3,1,1)
-        plt.hist(error.flatten(),100)
-        plt.subplot(3,1,2)
         plt.hist(outputOpencv.flatten(),100)
         # plt.plot(histOpenCv,color='r');plt.plot(histCustomConvolve)
-        plt.subplot(3,1,3)
+        plt.subplot(3,1,2)
         plt.hist(outputCustomConvolve.flatten(),100)
         plt.show()
-
-
 ###########Gauss test#####################
 # gausstest= cv.filter2D(imageGray, -1,gauss)
 # gausstest1 = cv.GaussianBlur(imageGray,(5,5),0)
@@ -222,7 +276,6 @@ if(1):
 # cv.imshow('{} opencv convolve'.format('gauss1'),gausstest1)
 # cv.waitKey(0)
 # cv.destroyAllWindows()
-
 
 
 ##info Peak signal to noise ratio
