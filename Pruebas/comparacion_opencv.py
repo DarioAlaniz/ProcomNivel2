@@ -11,63 +11,75 @@ from tool._fixedInt import *
 #Var globales
 espacio = 100
 
-# def rescale_intensity_coustom(image):
-#     global espacio
-#     #Faltar completar, simplemente esta como prueba para ver que hacer la funcion!!!
-#     out_dtype = _output_dtype(image.dtype.type)
-#     print ("Tipo de dato de salida de la imagen".capitalize().center(espacio, "*"))
-#     print(out_dtype)
-#     out_range = 'dtype'
-#     imin, imax = map(float, intensity_range(image, (0,255)))
-#     print ("Rango de entrada: ".capitalize().center(espacio, "*"))
-#     print(imin,imax,type(imin))
-#     omin, omax = map(float, intensity_range(image, out_range,
-#                                             clip_negative=(imin >= 0)))
-#     print ("Rango de salida: ".capitalize().center(espacio, "*"))
-#     print(omin,omax,type(omin))                                                 
-#     image = np.clip(image, imin, imax)
-#     print ("Corte de lo valores fuera del rango de entrada".capitalize().center(espacio, "*"))
-#     print(image)
-#     image = (image - imin) / (imax - imin)
-#     print ("Divicion por el rango maximo de entrada".capitalize().center(espacio, "*"))
-#     print(image)
-#     return np.asarray(image * (omax - omin) + omin, dtype=out_dtype)
-    # image = image / imax
-
 def rescale_intensity_coustom(image):
-    #nota : se debe hacer un corte (np.clip(image,(0,255))), cuando la matriz tiene numeros negativos 
+    # nota : se debe hacer un corte (np.clip(image,(0,255))), cuando la matriz tiene numeros negativos 
+
+    # valor para restablecer la imagen de salida de 0 a 255
     max = DeFixedInt(8,0,'U') 
-    max.value = 255.0                                   #valor para restablecer la imagen de salida de 0 a 255
+    max.value = 255.0
+    # Vuelvo a llevar la imagen de 0 a 255                           
     image = image * max
+
+    print("Imagen en rango de 0 a 255".capitalize().center(espacio, "*"))
     print(image)
-    imageFloat      = fixPointToFloat(image)            #obtengo el representa en flotante para solamente tomar la parte entera 
-    print(imageFloat)
-    imageRescale    = fixPointImage(imageFloat,8,0,'U') #imagen solo teniendo en cuenta la parte entera
-    print(imageRescale)
-    imageRescale    = fixPointoIntValue(imageRescale)   #Obtengo el entero representante
+
+    # obtengo el representa en flotante para solamente tomar la parte entera
+    # se obtiene el flotante representante por que por medio de la libreria fixPoint no se puede pasar 
+    # directamete de un S(A,B) en U(8,0)
+    imageFloat      = fixPointToFloat(image)            
+    
+    # Cuantifico otra vez pero ahora en formate U(8,0)
+    # para solo tener en cuenta la parte entera
+    imageRescale    = fixPointImage(imageFloat,8,0,'U') 
+
+    # Obtengo el entero representante
+    imageRescale    = fixPointoIntValue(imageRescale)   
+
+    # Retorno la imagen en formate U(8,0) --> uint8 
     return imageRescale
 
 def fixPointImage(image,NB,NBF,sMode,rMode='round',satMode='saturate'):
+    # Como la libreria de fixPoint trabaja con el float de python antes de cuantificar tengo que pasarla al 
+    # flota de python
     imageFlatten    = np.array(image,dtype=float)
+
+    # Como la libreria trabaja con vectores, paso la imagen a un vector
     imageFlatten    = imageFlatten.flatten()
+
+    # cuantifico
     imagePf         = arrayFixedInt(NB,NBF,imageFlatten,signedMode=sMode,roundMode=rMode,saturateMode=satMode)
+
+    # reshape de la imagen cuantificada
     imagePf         = imagePf.reshape(image.shape[0],image.shape[1])
+
     return imagePf
 
 def fixPointToFloat(matrix):
+    # Lo trabajo como vector por simplicidad
     matrixFlatten   = matrix.flatten()
+
+    # matris de salida definida en float(por defecto) por ser datos en float los que se van a almacenar
     imageFloat      = np.zeros(matrix.size)
     for i in range(len(matrixFlatten)):
         imageFloat[i]   = matrixFlatten[i].fValue
-    imageFloat      = imageFloat.reshape(matrix.shape[0],matrix.shape[1]) #matris cuantificada
+
+    # matris cuantificada, con un reshape
+    imageFloat      = imageFloat.reshape(matrix.shape[0],matrix.shape[1]) 
+
     return imageFloat
 
 def fixPointoIntValue(matrix):
+    # Lo trabajo como vector por simplicidad
     matrixFlatten   = matrix.flatten()
-    imageIntValue   = np.zeros(matrix.size,dtype=np.uint8) #definida en uint8 por guardar datos en 
+
+    # matris de salida definida en uint8 por ser datos en U(8,0) los que se van a almacenar 
+    imageIntValue   = np.zeros(matrix.size,dtype=np.uint8) 
     for i in range(len(matrixFlatten)):
         imageIntValue[i] = matrixFlatten[i].intvalue
-    imageIntValue   = imageIntValue.reshape(matrix.shape[0],matrix.shape[1]) #matris cuantificada
+    
+    # matris cuantificada, con un reshape
+    imageIntValue   = imageIntValue.reshape(matrix.shape[0],matrix.shape[1]) 
+
     return imageIntValue
 
 def conv(image,kernel):
@@ -89,15 +101,17 @@ def conv(image,kernel):
     # kernel=np.flipud(kernel) #roto en el eje y
     # kernel=np.fliplr(kernel) #roto en el eje x    
 
-    #normalizo para usar un notacion Q(7) no tengo en cuenta el signo
+    # normalizo para trabajar solo con la parte fraccional y asi no aumentar muchos bit en la multiplicacion,
+    # no se va de rango y solo pierdo bit en la parte menos significativa de la parte fracional
+    # ej:   99*99       =   9801    cresco en la cantidad de digitos y magnitud
+    #       0.99*0.99   =   0.9801  no me voy de rango y no me tengo menos bit en la parte mas significativa
     enlargedImage = enlargedImage / 255         
-
     #imagen cuantificada, luego del padding
     imagePf = fixPointImage(enlargedImage,nb,nbs,sig)                
     
-    #Generacion de la matriz de salida
+    #Generacion de la matriz de salida, donde se guardan los resultados
     output = np.zeros(image.size,dtype=float)
-    output = arrayFixedInt(nb,nbs,output,signedMode=sig,roundMode='round',saturateMode='saturate') #matris de salida donde se guardan los resultados
+    output = arrayFixedInt(nb,nbs,output,signedMode=sig,roundMode='round',saturateMode='saturate') 
     output = output.reshape(np.shape(image))
     # print(output)
 
@@ -121,16 +135,15 @@ def conv(image,kernel):
             # Con punto flotante
             # output [y,x] = (reg * kernel).sum()
     
-    
+
     print ("Imagen antes del rescale:".capitalize().center(espacio, "*"))
     print(output)
-    # output = rescale_intensity(output, in_range=(0,255))
+
     output = rescale_intensity_coustom(output)
+
     print ("Imagen despues del rescale".capitalize().center(espacio, "*"))
     print(output)
-    output = (output*255).astype("uint8") #para poder usarla en la openCV
-    print ("Vuelve a multiplicar por 255 y toma la parte entera".capitalize().center(espacio, "*"))
-    print(output)
+    
     # print(_output_dtype(output.dtype.type))
     # La otra metodologia impuesta por en trabajo conseva todo el rango, pero cambia un poco en la escala ya que lleva la media
     # con histograma se aprecia este corrimiento
@@ -161,22 +174,7 @@ kernels = { 'smallBlur'     : filter.smallBlur,
             'sobelX'        : filter.sobelX,
             'sobelY'        : filter.sobelY }
 
-'''
-# Cuantificacion de la imagen de entrada
-# como esta en escala de grises cada pixel es un byte por lo que es unsigned U(8,0)
-# Como se tiene distintos kernel tanto unsigned como signed hay que buscar una cuantificacion que sea adecuada para
-# trabajar tanto con unsigned como signed, consulta!!!
-# ________Notas:
-# en principio solo se va a trabajar con el gauss por eso se esta trabajando en el, si hace falta se hace las mismas pruebas con otro kernel
-# ________Mejoras:
-# producto de la convolucion con punto fijo por medio de la libreria.
-# ________Tareas : 
-# Ver rescale, estimando el tamaño de final de cada pixel en punto fijo para poder realizarlo 
-# Ver padding
-# estimar la cantidad de bit de la parte entera y fraccionaria
-# Ver el snr del kernel gauss para asignar la cantidad de bit adecuados para la parte fraccional
-# 
-'''
+
 
 '''
 # Cuantificacion de kernel gauss
@@ -278,6 +276,26 @@ if(1):
 # cv.destroyAllWindows()
 
 
+
+'''
+# ________Notas:
+# * Cuantificacion de la imagen de entrada como esta en escala de grises cada pixel es un byte por lo que es unsigned U(8,0).
+#   Como se tiene distintos kernel tanto unsigned como signed hay que buscar una cuantificacion que sea adecuada para
+#   trabajar tanto con unsigned como signed. Se opto por trabajar en formato S(A,A-1) para no perder el rango, ni aumentar en magnitud en la multiplicacion
+#   y signado por si se quiere implementar algun kernel con valores con signo.
+# * Llevar la matris de entrada en S(8,7) es desplazar los valores U(8,0) 8 bit hacia la derecha
+#   y multiplicar la matris de salida por 255 seria desplazar los bit fraccionales 8 posiciones a la derecha 
+# * En principio solo se va a trabajar con el gauss por eso se esta trabajando en el, si hace falta se hace las mismas pruebas con otro kernel
+# ________Mejoras:
+# producto de la convolucion con punto fijo por medio de la libreria.
+# rescale impletentado
+# cantidad de bit adecuados para el kernel en la parte fraccional : Con un S(10,9) funciona bastante bien
+# ________Tareas : 
+# Padding
+# estimar la cantidad de bit de la parte entera y fraccionaria
+# Correguir SNR con las imagenes de salida 
+# 
+'''
 ##info Peak signal to noise ratio
 # cv.PSNR() 
 # #https://www.ni.com/es-cr/innovations/white-papers/11/peak-signal-to-noise-ratio-as-an-image-quality-metric.html info PSNR entre 2 imagenes
