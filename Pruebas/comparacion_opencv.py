@@ -11,33 +11,39 @@ from tool._fixedInt import *
 #Var globales
 espacio = 100
 
-def rescale_intensity_coustom(image):
+def rescale_intensity_coustom(image,shift=8):
     # nota : se debe hacer un corte (np.clip(image,(0,255))), cuando la matriz tiene numeros negativos 
-
+    global espacio
     # valor para restablecer la imagen de salida de 0 a 255
     max = DeFixedInt(8,0,'U') 
     max.value = 255.0
     # Vuelvo a llevar la imagen de 0 a 255                           
-    image = image * max
+    # image = image * max
 
-    print("Imagen en rango de 0 a 255".capitalize().center(espacio, "*"))
-    print(image)
+    # print("Imagen en rango de 0 a 255".capitalize().center(espacio, "*"))
+    # print(image)
 
     # obtengo el representa en flotante para solamente tomar la parte entera
     # se obtiene el flotante representante por que por medio de la libreria fixPoint no se puede pasar 
     # directamete de un S(A,B) en U(8,0)
-    imageFloat      = fixPointToFloat(image) 
+    # imageFloat      = fixPointToFloat(image) 
 
     # Cuantifico otra vez pero ahora en formate U(8,0)
     # para solo tener en cuenta la parte entera
-    imageRescale    = fixPointImage(imageFloat,8,0,'U') 
+    # imageRescale    = fixPointImage(imageFloat,8,0,'U') 
 
     # Obtengo el entero representante
-    imageRescale    = fixPointoIntValue(imageRescale) 
+    # imageRescale    = fixPointoIntValue(imageRescale) 
 
-      
-
+    #prueba sin pensar escalar la imagen en rango de 0 a 1
+    imageRescale    = fixPointoIntValue(image)
+    print("Valores en uint de los pixeles".capitalize().center(espacio, "*"))
+    print(imageRescale)
+    imageRescale    = imageRescale >> shift ##el shift debe ser de igual al NBS del kernel para que de un resultado correcto
+    print("shift de 8 a los pixeles".capitalize().center(espacio, "*"))
+    print(imageRescale)
     # Retorno la imagen en formate U(8,0) --> uint8 
+    imageRescale    = np.array(imageRescale,dtype=np.uint8)
     return imageRescale
 
 def fixPointImage(image,NB,NBF,sMode,rMode='round',satMode='saturate'):
@@ -75,7 +81,8 @@ def fixPointoIntValue(matrix):
     matrixFlatten   = matrix.flatten()
 
     # matris de salida definida en uint8 por ser datos en U(8,0) los que se van a almacenar 
-    imageIntValue   = np.zeros(matrix.size,dtype=np.uint8) 
+    # aclaracion: se cambia a uint64 para probar otro tipo de suma y productos de bit de salida
+    imageIntValue   = np.zeros(matrix.size,dtype=np.uint64) 
     for i in range(len(matrixFlatten)):
         imageIntValue[i] = matrixFlatten[i].intvalue
     
@@ -100,7 +107,7 @@ def padding(image,kh,kw):
 
     return imagePadding
 
-def conv(image,kernel,NB,NBF):
+def conv(image,kernel,NB,NBF,shi=8):
     global espacio
     # nb=16
     # nbs=16
@@ -112,8 +119,8 @@ def conv(image,kernel,NB,NBF):
     # saca el numero de fila y columnas para hacer un zero padding
     pad = kw//2
     # armo la imagen ampliada para tener los mismo pixeles de salida
-    # enlargedImage=cv.copyMakeBorder(image,pad,pad,pad,pad,cv.BORDER_REFLECT_101)
-    enlargedImage = padding(image,kh,kw)
+    enlargedImage=cv.copyMakeBorder(image,pad,pad,pad,pad,cv.BORDER_CONSTANT)
+    # enlargedImage = padding(image,kh,kw)
     # rotacion del kernel, opencv hace una correlacion no una convolucion por lo que no rota el kernel
     kernel = np.flip(kernel)                    
     # kernel=np.flipud(kernel) #roto en el eje y
@@ -158,7 +165,7 @@ def conv(image,kernel,NB,NBF):
     print ("Imagen de salida antes del rescale:".capitalize().center(espacio, "*"))
     print(output)
     
-    output = rescale_intensity_coustom(output)
+    output = rescale_intensity_coustom(output,shift=shi)
 
     print ("Imagen de salida despues del rescale".capitalize().center(espacio, "*"))
     print(output)
@@ -196,14 +203,14 @@ kernels = { 'smallBlur'     : filter.smallBlur,
 '''
 # Cuantificacion de kernel gauss
 '''
-if(0):
+if(1):
     SNRVect = []
     PSNRVect= []
-    NB=9
-    NBF=8
+    NB=11
+    NBF=10
     Mode='round'
     sizeGauss=25
-    inicio = 1
+    inicio = 3
     #filtro gauss generado para pruebas de cuantificacion
     gauss = cv.getGaussianKernel(sizeGauss,0,cv.CV_32F) 
     gauss = np.array(gauss,dtype=float)
@@ -211,23 +218,30 @@ if(0):
     # print(gauss)
     listErrorImage=[]
     outputOpencvRef = cv.filter2D(imageGray,-1,gauss)
+    outputOpencvRef_f = np.array(outputOpencvRef,dtype=np.float)
+    print(outputOpencvRef)
     #para el calculo del SNR
-    signal  = np.dot(outputOpencvRef.flatten(),outputOpencvRef.flatten()) 
+    signal  = np.dot(outputOpencvRef_f.flatten(),outputOpencvRef_f.flatten()) 
     for i in range(inicio,NBF+1):
         print('*'*25)
         print('Numero de bit fraccionales: ',i)
         gaussPf = fixPointImage(gauss,NB,i,'U','round','saturate')
         # print(gaussPfValue)
-        errorGauss =  gauss - fixPointToFloat (gaussPf)
-        SNR =10*np.log10(np.dot(gauss.flatten(),gauss.flatten())/np.dot(errorGauss.flatten(),errorGauss.flatten()))
+        #################
+        # SRN del kernel
+        # errorGauss =  gauss - fixPointToFloat (gaussPf)
+        # signal = np.dot(gauss.flatten(),gauss.flatten())
+        # noise  =np.dot(errorGauss.flatten(),errorGauss.flatten())
+        # SNR =10*np.log10(signal/noise)
+        # print(signal,noise,SNR)
         ###Verificar el SNR!!!
-        # outputCustomConvolve    = conv(imageGray,gaussPf,NB,i)
-        # error   = outputOpencvRef - outputCustomConvolve
-        # noise   = np.dot(error.flatten(),error.flatten())
-        # # print(signal)
-        # # print(noise)
-        # SNR     = 10*np.log10(signal/noise)
-        # print(SNR)
+        outputCustomConvolve    = conv(imageGray,gaussPf,8,0,shi=i)
+        # outputCustomConvolve_f    = np.array(outputCustomConvolve,dtype=np.float)
+        error   = outputOpencvRef - outputCustomConvolve
+        error   = np.array(error,dtype=np.float)
+        noise   = np.dot(error.flatten(),error.flatten())
+        SNR     = 10*np.log10(signal/noise)
+        print(signal,noise,SNR)
         #################
         # listErrorImage.append(error.sum()/(iw*ih)) #erro cuadratico medio
         # PSNRVect.append(cv.PSNR(outputOpencvRef,outputCustomConvolve))
@@ -257,17 +271,19 @@ if(0):
 
 Prueba para ver la imagen de salida con el kernel cuantificado
 ''' 
-if(1):
+if(0):
     NB=8
     NBF=0
     sizeGauss=25
     gauss = cv.getGaussianKernel(sizeGauss,0,cv.CV_32F) #filtro gauss generado para pruebas de cuantificacion
     gauss = gauss.reshape(sizeGauss//5,sizeGauss//5)
-    gaussPf = fixPointImage(gauss,9,8,'U','round','saturate') #convierto a formato Q(9)
+    gaussPf = fixPointImage(gauss,10,8,'U','round','saturate') #convierto a formato Q(9)
     print ("kernel cuantificado".capitalize().center(espacio, "*"))
     print(gaussPf)
-    outputCustomConvolve = conv(imageGray,gaussPf,NB,NBF)
+    outputCustomConvolve = conv(imageGray,gaussPf,NB,NBF,shi=8)
     outputOpencv = cv.filter2D(imageGray,-1,gauss)
+    print ("conv por openCV".capitalize().center(espacio, "*"))
+    print(outputOpencv)
     error = outputOpencv - outputCustomConvolve
     cv.imshow('original,Gauss FloatPoint,Gauss FixPoint,Error',
                 np.hstack([imageGray,outputOpencv,outputCustomConvolve,error]))
